@@ -105,7 +105,7 @@ export default function Home() {
     <>
       <Head>
         <title>HALALSCORE | Shariah Compliance Analytics</title>
-        <meta name="description" content="Professional Shariah compliance analysis for institutional investors" />
+        <meta name="description" content="Professional Shariah compliance analysis platform for institutional investors" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -155,7 +155,7 @@ export default function Home() {
               Shariah Compliance Analysis
             </h1>
             <p className="text-lg text-[#94A3B8] font-mono">
-              Bloomberg-grade analytics · 7 international standards · Zero speculation
+              Institutional-grade analytics · 7 international standards · Verified data
             </p>
           </div>
 
@@ -293,7 +293,7 @@ export default function Home() {
                   </div>
                 </div>
                 <p className="text-xs text-[#64748B] mt-6 font-mono">
-                  Source: SEC EDGAR 10-K Filing (XBRL format)
+                  Source: Official regulatory filings · Multi-source verification
                 </p>
               </div>
 
@@ -302,9 +302,9 @@ export default function Home() {
                 <h4 className="font-bold text-[#F59E0B] mb-3 text-sm uppercase tracking-wider">⚠ IMPORTANT DISCLAIMER</h4>
                 <p className="text-sm text-[#94A3B8] leading-relaxed font-mono">
                   This analysis is provided FOR INFORMATIONAL PURPOSES ONLY. It does not constitute investment advice, 
-                  a religious ruling (fatwa), or a guarantee of Shariah compliance. Data sourced from SEC EDGAR 10-K filings (XBRL format). 
-                  Analysis date: {new Date().toLocaleString('en-GB')}. Always consult a qualified Islamic scholar and licensed financial 
-                  advisor before making investment decisions.
+                  a religious ruling (fatwa), or a guarantee of Shariah compliance. Data sourced from official regulatory filings 
+                  and verified through multi-source validation. Analysis date: {new Date().toLocaleString('en-GB')}. 
+                  Always consult a qualified Islamic scholar and licensed financial advisor before making investment decisions.
                 </p>
               </div>
 
@@ -332,9 +332,9 @@ export default function Home() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-semibold mb-3 text-white">SEC EDGAR Data</h3>
+                <h3 className="text-xl font-semibold mb-3 text-white">Verified Data Sources</h3>
                 <p className="text-[#94A3B8] text-sm">
-                  Direct extraction from official 10-K filings using advanced XBRL parsing technology.
+                  Multi-source validation from official regulatory filings and institutional databases.
                 </p>
               </div>
               
@@ -344,9 +344,9 @@ export default function Home() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-semibold mb-3 text-white">Zero Speculation</h3>
+                <h3 className="text-xl font-semibold mb-3 text-white">Verified Methodology</h3>
                 <p className="text-[#94A3B8] text-sm">
-                  NEC PLUS ULTRA quality. No invented data. Transparent methodology. Full audit trail.
+                  Rigorous validation process. No speculative data. Transparent methodology. Full audit trail.
                 </p>
               </div>
             </div>
@@ -359,7 +359,7 @@ export default function Home() {
           <div className="max-w-[1440px] mx-auto px-8 py-8">
             <div className="text-center text-sm text-[#64748B] font-mono">
               <p>© 2026 HALALSCORE | Universal Shariah Compliance Analytics</p>
-              <p className="mt-2">NEC PLUS ULTRA - Bloomberg-Grade Financial Analysis</p>
+              <p className="mt-2">Institutional-Grade Financial Analysis Platform</p>
             </div>
           </div>
         </footer>
