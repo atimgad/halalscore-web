@@ -1,104 +1,96 @@
 import { useState } from 'react'
 import Head from 'next/head'
+import InvalidTickersModal from './InvalidTickersModal'
 
 export default function Home() {
   const [ticker, setTicker] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
+  const [showInvalidModal, setShowInvalidModal] = useState(false)
+  const [invalidTickers, setInvalidTickers] = useState([])
 
   const analyzeTicker = async () => {
     if (!ticker) return
     setLoading(true)
+    setResult(null)
     
-    // Simulation API call
-    setTimeout(() => {
-      setResult({
-        ticker: ticker.toUpperCase(),
-        companyName: getCompanyName(ticker.toUpperCase()),
-        verdict: ticker.toUpperCase() === 'KO' ? 'NON-COMPLIANT' : 'COMPLIANT',
-        score: ticker.toUpperCase() === 'KO' ? 0 : 100,
-        standards: {
-          'AAOIFI Standard 21': { 
-            pass: ticker.toUpperCase() !== 'KO',
-            debtRatio: ticker.toUpperCase() === 'KO' ? '44.09%' : '12.4%',
-            threshold: '30%',
-            cashRatio: '8.2%',
-            interestRatio: '0.14%'
-          },
-          'DJIM': { 
-            pass: ticker.toUpperCase() !== 'KO',
-            debtRatio: ticker.toUpperCase() === 'KO' ? '44.09%' : '12.4%',
-            threshold: '33%',
-            cashRatio: '8.2%',
-            interestRatio: '0.14%'
-          },
-          'S&P Shariah': { 
-            pass: ticker.toUpperCase() !== 'KO',
-            debtRatio: ticker.toUpperCase() === 'KO' ? '44.09%' : '12.4%',
-            threshold: '33%',
-            cashRatio: '8.2%',
-            interestRatio: '0.14%'
-          },
-          'MSCI Islamic': { 
-            pass: ticker.toUpperCase() !== 'KO',
-            debtRatio: ticker.toUpperCase() === 'KO' ? '44.09%' : '12.4%',
-            threshold: '33%',
-            cashRatio: '8.2%',
-            interestRatio: '0.14%'
-          },
-          'FTSE Shariah': { 
-            pass: ticker.toUpperCase() !== 'KO',
-            debtRatio: ticker.toUpperCase() === 'KO' ? '44.09%' : '12.4%',
-            threshold: '33%',
-            cashRatio: '8.2%',
-            interestRatio: '0.14%'
-          },
-          'Meezan Bank': { 
-            pass: ticker.toUpperCase() !== 'KO',
-            debtRatio: ticker.toUpperCase() === 'KO' ? '44.09%' : '12.4%',
-            threshold: '33%',
-            cashRatio: '8.2%',
-            interestRatio: '0.14%'
-          },
-          'Mufti Taqi Usmani': { 
-            pass: ticker.toUpperCase() !== 'KO',
-            debtRatio: ticker.toUpperCase() === 'KO' ? '44.09%' : '12.4%',
-            threshold: '33%',
-            cashRatio: '8.2%',
-            interestRatio: '0.14%'
-          }
+    try {
+      const response = await fetch('/api/backend/v1/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        financials: {
-          assets: ticker.toUpperCase() === 'KO' ? 100549 : 359241,
-          debt: ticker.toUpperCase() === 'KO' ? 44335 : 45000,
-          revenue: ticker.toUpperCase() === 'KO' ? 99043 : 416161,
-          interest: ticker.toUpperCase() === 'KO' ? 988 : 565,
-          cash: 28790,
-          receivables: 35000
-        }
+        body: JSON.stringify({
+          ticker: ticker.toUpperCase(),
+          language: 'EN'
+        })
       })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null)
+        
+        if (response.status === 404) {
+          // Ticker not found - Afficher modale professionnelle
+          setInvalidTickers([{
+            ticker: ticker.toUpperCase(),
+            status: 'Introuvable - Vérifiez l\'orthographe ou l\'existence sur les marchés',
+            timestamp: new Date().toISOString()
+          }])
+          setShowInvalidModal(true)
+          setLoading(false)
+          return
+        }
+        
+        throw new Error(errorData?.detail || `Erreur API (${response.status})`)
+      }
+      
+      const data = await response.json()
+      
+      setResult({
+        ticker: data.ticker,
+        companyName: data.company_name,
+        verdict: data.verdict,
+        score: data.score,
+        standards: transformStandards(data.standards),
+        financials: data.financials
+      })
+      
+    } catch (error) {
+      console.error('Analysis failed:', error)
+      
+      if (error.message.includes('Failed to fetch')) {
+        alert(`❌ ERREUR DE CONNEXION\n\nL'API n'est pas accessible.\n\nVérifiez que:\n• L'API tourne sur http://localhost:8000\n• Aucun pare-feu ne bloque la connexion`)
+      } else {
+        alert(`❌ ERREUR D'ANALYSE\n\n${error.message}\n\nSi le problème persiste, contactez le support technique.`)
+      }
+    } finally {
       setLoading(false)
-    }, 1500)
-  }
-
-  const getCompanyName = (ticker) => {
-    const names = {
-      'AAPL': 'Apple Inc.',
-      'MSFT': 'Microsoft Corporation',
-      'TSLA': 'Tesla Inc.',
-      'AMZN': 'Amazon.com Inc.',
-      'GOOGL': 'Alphabet Inc.',
-      'META': 'Meta Platforms Inc.',
-      'NVDA': 'NVIDIA Corporation',
-      'KO': 'The Coca-Cola Company'
     }
-    return names[ticker] || `${ticker} Corporation`
+  }
+  
+  const transformStandards = (apiStandards) => {
+    const transformed = {}
+    Object.entries(apiStandards).forEach(([name, data]) => {
+      transformed[name] = {
+        pass: data.compliant,
+        debtRatio: data.ratios.debt,
+        threshold: data.thresholds.debt,
+        cashRatio: data.ratios.cash,
+        cashThreshold: data.thresholds.cash,
+        receivablesRatio: data.ratios.receivables,
+        receivablesThreshold: data.thresholds.receivables,
+        interestRatio: data.ratios.interest,
+        interestThreshold: data.thresholds.interest
+      }
+    })
+    return transformed
   }
 
   const formatNumber = (num) => {
-    if (num >= 1000000) return `$${(num/1000000).toFixed(1)}B`
-    if (num >= 1000) return `$${(num/1000).toFixed(1)}M`
-    return `$${num.toFixed(0)}M`
+    if (num >= 1000000000) return `$${(num/1000000000).toFixed(1)}B`
+    if (num >= 1000000) return `$${(num/1000000).toFixed(1)}M`
+    if (num >= 1000) return `$${(num/1000).toFixed(1)}K`
+    return `$${num.toFixed(0)}`
   }
 
   return (
@@ -216,11 +208,11 @@ export default function Home() {
                   </div>
                   <div className="flex flex-col gap-2">
                     <span className="text-xs uppercase tracking-wider text-[#94A3B8]">Total Assets</span>
-                    <span className="text-2xl font-medium text-[#D4AF37] font-mono">{formatNumber(result.financials.assets)}</span>
+                    <span className="text-2xl font-medium text-[#D4AF37] font-mono">{formatNumber(result.financials.total_assets)}</span>
                   </div>
                   <div className="flex flex-col gap-2">
                     <span className="text-xs uppercase tracking-wider text-[#94A3B8]">Total Revenue</span>
-                    <span className="text-2xl font-medium text-[#D4AF37] font-mono">{formatNumber(result.financials.revenue)}</span>
+                    <span className="text-2xl font-medium text-[#D4AF37] font-mono">{formatNumber(result.financials.total_revenue)}</span>
                   </div>
                   <div className="flex flex-col gap-2">
                     <span className="text-xs uppercase tracking-wider text-[#94A3B8]">Standards Pass</span>
@@ -236,28 +228,71 @@ export default function Home() {
                     <thead>
                       <tr className="bg-[#14181F]">
                         <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">Standard</th>
-                        <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">Debt Ratio</th>
-                        <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">Threshold</th>
+                        <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">Debt</th>
+                        <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">Cash</th>
+                        <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">Receivables</th>
+                        <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">Interest</th>
                         <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#2A313C]">
-                      {Object.entries(result.standards).map(([name, data], idx) => (
-                        <tr key={idx} className="hover:bg-[#1F262E] transition-colors">
-                          <td className="px-6 py-4 font-medium text-white">{name}</td>
-                          <td className="px-6 py-4 text-right text-[#94A3B8] font-mono">{data.debtRatio}</td>
-                          <td className="px-6 py-4 text-right text-[#64748B] font-mono">≤ {data.threshold}</td>
-                          <td className="px-6 py-4 text-center">
-                            <span className={`inline-flex items-center px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded ${
-                              data.pass 
-                                ? 'bg-[rgba(16,185,129,0.1)] text-[#10B981] border border-[rgba(16,185,129,0.2)]' 
-                                : 'bg-[rgba(239,68,68,0.1)] text-[#EF4444] border border-[rgba(239,68,68,0.2)]'
-                            }`}>
-                              {data.pass ? '✓ PASS' : '✗ FAIL'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
+                      {Object.entries(result.standards).map(([name, data], idx) => {
+                        const debtValue = parseFloat(data.debtRatio)
+                        const cashValue = parseFloat(data.cashRatio)
+                        const recValue = parseFloat(data.receivablesRatio)
+                        const intValue = parseFloat(data.interestRatio)
+                        
+                        const debtThreshold = parseFloat(data.threshold)
+                        const cashThreshold = parseFloat(data.cashThreshold || data.threshold)
+                        const recThreshold = parseFloat(data.receivablesThreshold || '45')
+                        const intThreshold = 5.0
+                        
+                        const debtExceeds = debtValue > debtThreshold
+                        const cashExceeds = cashValue > cashThreshold
+                        const recExceeds = recValue > recThreshold
+                        const intExceeds = intValue > intThreshold
+                        
+                        return (
+                          <tr key={idx} className="hover:bg-[#1F262E] transition-colors">
+                            <td className="px-6 py-4 font-medium text-white">{name}</td>
+                            
+                            <td className={`px-6 py-4 text-right font-mono ${debtExceeds ? 'bg-white' : ''}`}>
+                              <span className={debtExceeds ? 'text-red-600 font-bold' : 'text-[#94A3B8]'}>
+                                {data.debtRatio}
+                              </span>
+                              <span className="text-[#64748B] text-xs ml-2">≤{data.threshold}</span>
+                            </td>
+                            
+                            <td className={`px-6 py-4 text-right font-mono ${cashExceeds ? 'bg-white' : ''}`}>
+                              <span className={cashExceeds ? 'text-red-600 font-bold' : 'text-[#94A3B8]'}>
+                                {data.cashRatio}
+                              </span>
+                            </td>
+                            
+                            <td className={`px-6 py-4 text-right font-mono ${recExceeds ? 'bg-white' : ''}`}>
+                              <span className={recExceeds ? 'text-red-600 font-bold' : 'text-[#94A3B8]'}>
+                                {data.receivablesRatio || 'N/A'}
+                              </span>
+                            </td>
+                            
+                            <td className={`px-6 py-4 text-right font-mono ${intExceeds ? 'bg-white' : ''}`}>
+                              <span className={intExceeds ? 'text-red-600 font-bold' : 'text-[#94A3B8]'}>
+                                {data.interestRatio}
+                              </span>
+                            </td>
+                            
+                            <td className="px-6 py-4 text-center">
+                              <span className={`inline-flex items-center px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded ${
+                                data.pass 
+                                  ? 'bg-[rgba(16,185,129,0.1)] text-[#10B981] border border-[rgba(16,185,129,0.2)]' 
+                                  : 'bg-[rgba(239,68,68,0.1)] text-[#EF4444] border border-[rgba(239,68,68,0.2)]'
+                              }`}>
+                                {data.pass ? '✓ PASS' : '✗ FAIL'}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -269,19 +304,19 @@ export default function Home() {
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
                   <div>
                     <span className="text-xs uppercase tracking-wider text-[#94A3B8] block mb-2">Total Assets</span>
-                    <span className="text-xl font-mono text-white">{formatNumber(result.financials.assets)}</span>
+                    <span className="text-xl font-mono text-white">{formatNumber(result.financials.total_assets)}</span>
                   </div>
                   <div>
                     <span className="text-xs uppercase tracking-wider text-[#94A3B8] block mb-2">Total Debt</span>
-                    <span className="text-xl font-mono text-white">{formatNumber(result.financials.debt)}</span>
+                    <span className="text-xl font-mono text-white">{formatNumber(result.financials.total_debt)}</span>
                   </div>
                   <div>
                     <span className="text-xs uppercase tracking-wider text-[#94A3B8] block mb-2">Total Revenue</span>
-                    <span className="text-xl font-mono text-white">{formatNumber(result.financials.revenue)}</span>
+                    <span className="text-xl font-mono text-white">{formatNumber(result.financials.total_revenue)}</span>
                   </div>
                   <div>
                     <span className="text-xs uppercase tracking-wider text-[#94A3B8] block mb-2">Interest Income</span>
-                    <span className="text-xl font-mono text-white">{formatNumber(result.financials.interest)}</span>
+                    <span className="text-xl font-mono text-white">{formatNumber(result.financials.interest_income)}</span>
                   </div>
                   <div>
                     <span className="text-xs uppercase tracking-wider text-[#94A3B8] block mb-2">Cash & Equivalents</span>
@@ -353,6 +388,18 @@ export default function Home() {
           )}
 
         </main>
+
+        {/* Invalid Tickers Modal */}
+        {showInvalidModal && (
+          <InvalidTickersModal
+            invalidTickers={invalidTickers}
+            onClose={() => setShowInvalidModal(false)}
+            onRetry={() => {
+              setShowInvalidModal(false)
+              setTicker('')
+            }}
+          />
+        )}
 
         {/* Footer */}
         <footer className="border-t border-[#2A313C] bg-[#14181F] mt-20">
