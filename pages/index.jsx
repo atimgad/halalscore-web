@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Head from 'next/head'
 import InvalidTickersModal from './InvalidTickersModal'
+import MultiTickerBatch from './MultiTickerBatch'
 
 export default function Home() {
   const [ticker, setTicker] = useState('')
@@ -8,6 +9,7 @@ export default function Home() {
   const [result, setResult] = useState(null)
   const [showInvalidModal, setShowInvalidModal] = useState(false)
   const [invalidTickers, setInvalidTickers] = useState([])
+  const [activeMode, setActiveMode] = useState('single') // single, batch, excel
 
   const analyzeTicker = async () => {
     if (!ticker) return
@@ -151,6 +153,43 @@ export default function Home() {
             </p>
           </div>
 
+          {/* MODE NAVIGATION */}
+          <div className="mb-8 flex gap-2 border-b border-[#2A313C]">
+            <button
+              onClick={() => setActiveMode('single')}
+              className={`px-6 py-3 text-sm font-semibold uppercase tracking-wider transition-all ${
+                activeMode === 'single'
+                  ? 'text-[#D4AF37] border-b-2 border-[#D4AF37]'
+                  : 'text-[#64748B] hover:text-[#94A3B8]'
+              }`}
+            >
+              Mode 1: Single Ticker
+            </button>
+            <button
+              onClick={() => setActiveMode('batch')}
+              className={`px-6 py-3 text-sm font-semibold uppercase tracking-wider transition-all ${
+                activeMode === 'batch'
+                  ? 'text-[#D4AF37] border-b-2 border-[#D4AF37]'
+                  : 'text-[#64748B] hover:text-[#94A3B8]'
+              }`}
+            >
+              Mode 2: Multi-Ticker Batch
+            </button>
+            <button
+              onClick={() => setActiveMode('excel')}
+              className={`px-6 py-3 text-sm font-semibold uppercase tracking-wider transition-all ${
+                activeMode === 'excel'
+                  ? 'text-[#D4AF37] border-b-2 border-[#D4AF37]'
+                  : 'text-[#64748B] hover:text-[#94A3B8]'
+              }`}
+            >
+              Mode 3: Excel Import
+            </button>
+          </div>
+
+          {/* MODE 1: SINGLE TICKER */}
+          {activeMode === 'single' && (
+            <>
           {/* Search */}
           <div className="mb-16">
             <div className="bg-[#1A1F26] rounded-lg border border-[#2A313C] p-8 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)]">
@@ -384,6 +423,23 @@ export default function Home() {
                   Rigorous validation process. No speculative data. Transparent methodology. Full audit trail.
                 </p>
               </div>
+            </div>
+          )}
+
+            </>
+          )}
+
+          {/* MODE 2: MULTI-TICKER BATCH */}
+          {activeMode === 'batch' && (
+            <MultiTickerBatch />
+          )}
+
+          {/* MODE 3: EXCEL IMPORT */}
+          {activeMode === 'excel' && (
+            <div className="text-center py-20">
+              <div className="text-6xl mb-4">📊</div>
+              <h3 className="text-2xl font-semibold text-white mb-2">Mode 3: Excel Import</h3>
+              <p className="text-[#94A3B8]">En cours de développement...</p>
             </div>
           )}
 

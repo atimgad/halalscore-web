@@ -98,11 +98,11 @@ export default function InvalidTickersModal({
 
   /**
    * EXPORT TXT
-   * Génère un fichier texte simple avec un ticker par ligne
+   * Génère un fichier texte avec format tabulé identique à Excel
    */
   const exportToText = () => {
     try {
-      // Format identique à Excel mais en TXT
+      // Format tabulé identique à Excel
       const headers = 'Ticker\tStatut\tDate/Heure'
       const rows = sortedTickers.map(t => 
         `${t.ticker}\t${t.status}\t${new Date(t.timestamp).toLocaleString('fr-FR')}`
