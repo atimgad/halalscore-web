@@ -211,7 +211,7 @@ export default function Home() {
                 </button>
               </div>
               <p className="text-xs text-[#64748B] mt-4 font-mono">
-                Last updated: {new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} UTC
+                Real-time Shariah compliance analysis
               </p>
             </div>
           </div>

@@ -280,7 +280,7 @@ export default function MultiTickerBatch() {
           <td>${r.receivablesRatio}</td>
           <td>${r.interestRatio}</td>
           <td style="color:#D4AF37;font-weight:bold;">${r.status === 'SUCCESS' ? r.score : '-'}</td>
-          <td>${r.status === 'SUCCESS' ? r.compliantStandards + '/' + r.totalStandards : '-'}</td>
+          <td>${r.status === 'SUCCESS' ? \`\${r.compliantStandards}/\${r.totalStandards}\` : '-'}</td>
           <td class="${r.verdict === 'COMPLIANT' ? 'verdict-compliant' : r.verdict === 'NON-COMPLIANT' ? 'verdict-noncompliant' : ''}">${r.verdict === 'COMPLIANT' ? '✓ HALAL' : r.verdict === 'NON-COMPLIANT' ? '✗ HARAM' : 'N/A'}</td>
         </tr>
       `).join('')}
