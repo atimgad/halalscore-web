@@ -96,7 +96,6 @@ export default function MultiTickerBatch() {
       
       const data = await response.json()
       
-      // Extraire les VRAIES valeurs depuis data.ratios (pas financials)
       const debtRatio = data.ratios?.debt_to_assets ? `${data.ratios.debt_to_assets.toFixed(2)}%` : 'N/A'
       const cashRatio = data.ratios?.cash_to_assets ? `${data.ratios.cash_to_assets.toFixed(2)}%` : 'N/A'
       const receivablesRatio = data.ratios?.receivables_to_assets ? `${data.ratios.receivables_to_assets.toFixed(2)}%` : 'N/A'
@@ -157,7 +156,7 @@ export default function MultiTickerBatch() {
       r.businessType || 'N/A',
       r.verdict,
       r.status === 'SUCCESS' ? r.score : 'N/A',
-      r.status === 'SUCCESS' ? `'${r.compliantStandards}/${r.totalStandards}` : 'N/A', // FORCE TEXTE avec apostrophe
+      r.status === 'SUCCESS' ? `'${r.compliantStandards}/${r.totalStandards}` : 'N/A',
       r.debtRatio,
       r.cashRatio,
       r.receivablesRatio,
@@ -309,6 +308,7 @@ export default function MultiTickerBatch() {
   const filteredResults = results.filter(r => {
     if (filter === 'ALL') return true
     if (filter === 'HALAL') return r.verdict === 'COMPLIANT'
+    if (filter === 'DOUTEUX') return r.verdict === 'PARTIAL'
     if (filter === 'HARAM') return r.verdict === 'NON-COMPLIANT'
     if (filter === 'ERRORS') return r.status === 'ERROR'
     return true
@@ -317,6 +317,7 @@ export default function MultiTickerBatch() {
   const stats = {
     total: results.length,
     compliant: results.filter(r => r.verdict === 'COMPLIANT').length,
+    partial: results.filter(r => r.verdict === 'PARTIAL').length,
     nonCompliant: results.filter(r => r.verdict === 'NON-COMPLIANT').length,
     errors: results.filter(r => r.status === 'ERROR').length
   }
@@ -324,7 +325,6 @@ export default function MultiTickerBatch() {
   return (
     <div className="space-y-6">
       
-      {/* BARRE DE PROGRESSION FIXE */}
       {loading && (
         <div className="fixed top-20 left-0 right-0 z-50 bg-[#1A1F26] border-b-2 border-[#D4AF37] shadow-2xl">
           <div className="max-w-[1440px] mx-auto px-8 py-4">
@@ -348,7 +348,6 @@ export default function MultiTickerBatch() {
         </div>
       )}
 
-      {/* MODALE CONFIRMATION */}
       {showConfirmModal && batchInfo && (
         <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
           <div className="bg-[#0B0E14] border-2 border-[#D4AF37] rounded-lg max-w-2xl w-full p-8">
@@ -436,6 +435,10 @@ export default function MultiTickerBatch() {
               <div className="text-xs uppercase tracking-wider text-[#94A3B8] mb-1">Halal</div>
               <div className="text-2xl font-bold text-[#10B981] font-mono">{stats.compliant}</div>
             </div>
+            <div className="bg-[#1A1F26] border border-[#F59E0B] rounded p-4">
+              <div className="text-xs uppercase tracking-wider text-[#94A3B8] mb-1">Douteux</div>
+              <div className="text-2xl font-bold text-[#F59E0B] font-mono">{stats.partial}</div>
+            </div>
             <div className="bg-[#1A1F26] border border-[#EF4444] rounded p-4">
               <div className="text-xs uppercase tracking-wider text-[#94A3B8] mb-1">Haram</div>
               <div className="text-2xl font-bold text-[#EF4444] font-mono">{stats.nonCompliant}</div>
@@ -454,10 +457,13 @@ export default function MultiTickerBatch() {
               <button onClick={() => setFilter('HALAL')} className={`px-4 py-2 rounded text-xs font-semibold uppercase tracking-wider transition-colors ${filter === 'HALAL' ? 'bg-[#10B981] text-white' : 'bg-[#2A313C] text-[#94A3B8] hover:bg-[#3A414C]'}`}>
                 Halal ({stats.compliant})
               </button>
+              <button onClick={() => setFilter('DOUTEUX')} className={`px-4 py-2 rounded text-xs font-semibold uppercase tracking-wider transition-colors ${filter === 'DOUTEUX' ? 'bg-[#F59E0B] text-white' : 'bg-[#2A313C] text-[#94A3B8] hover:bg-[#3A414C]'}`}>
+                Douteux ({stats.partial})
+              </button>
               <button onClick={() => setFilter('HARAM')} className={`px-4 py-2 rounded text-xs font-semibold uppercase tracking-wider transition-colors ${filter === 'HARAM' ? 'bg-[#EF4444] text-white' : 'bg-[#2A313C] text-[#94A3B8] hover:bg-[#3A414C]'}`}>
                 Haram ({stats.nonCompliant})
               </button>
-              <button onClick={() => setFilter('ERRORS')} className={`px-4 py-2 rounded text-xs font-semibold uppercase tracking-wider transition-colors ${filter === 'ERRORS' ? 'bg-[#F59E0B] text-white' : 'bg-[#2A313C] text-[#94A3B8] hover:bg-[#3A414C]'}`}>
+              <button onClick={() => setFilter('ERRORS')} className={`px-4 py-2 rounded text-xs font-semibold uppercase tracking-wider transition-colors ${filter === 'ERRORS' ? 'bg-[#64748B] text-white' : 'bg-[#2A313C] text-[#94A3B8] hover:bg-[#3A414C]'}`}>
                 Erreurs ({stats.errors})
               </button>
             </div>
@@ -502,8 +508,8 @@ export default function MultiTickerBatch() {
                         <td className="px-4 py-4 text-[#94A3B8] text-sm">{result.businessType || 'N/A'}</td>
                         <td className="px-4 py-4 text-center">
                           {result.status === 'SUCCESS' ? (
-                            <span className={`inline-flex items-center px-3 py-1 text-xs font-semibold uppercase rounded ${result.verdict === 'COMPLIANT' ? 'bg-[rgba(16,185,129,0.1)] text-[#10B981] border border-[rgba(16,185,129,0.2)]' : 'bg-[rgba(239,68,68,0.1)] text-[#EF4444] border border-[rgba(239,68,68,0.2)]'}`}>
-                              {result.verdict === 'COMPLIANT' ? '✓ HALAL' : '✗ HARAM'}
+                            <span className={`inline-flex items-center px-3 py-1 text-xs font-semibold uppercase rounded ${result.verdict === 'COMPLIANT' ? 'bg-[rgba(16,185,129,0.1)] text-[#10B981] border border-[rgba(16,185,129,0.2)]' : result.verdict === 'PARTIAL' ? 'bg-[rgba(245,158,11,0.1)] text-[#F59E0B] border border-[rgba(245,158,11,0.2)]' : 'bg-[rgba(239,68,68,0.1)] text-[#EF4444] border border-[rgba(239,68,68,0.2)]'}`}>
+                              {result.verdict === 'COMPLIANT' ? '✓ HALAL' : result.verdict === 'PARTIAL' ? '⚠ DOUTEUX' : '✗ HARAM'}
                             </span>
                           ) : <span className="text-[#64748B]">N/A</span>}
                         </td>
