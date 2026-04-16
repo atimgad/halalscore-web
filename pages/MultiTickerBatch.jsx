@@ -190,6 +190,7 @@ export default function MultiTickerBatch() {
     
     const total = filteredResults.length
     const halal = stats.compliant
+    const douteux = stats.partial
     const haram = stats.nonCompliant
     const errors = stats.errors
     
@@ -212,19 +213,21 @@ export default function MultiTickerBatch() {
     .doc-control td { padding: 8px; font-size: 10pt; }
     .doc-control td:first-child { font-weight: bold; color: #D4AF37; width: 180px; }
     .classification { background: #EF4444; color: white; padding: 10px; font-weight: bold; font-size: 12pt; margin: 30px auto; max-width: 500px; text-align: center; }
-    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 30px 0; }
+    .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin: 30px 0; }
     .stat-box { background: #F8F9FA; border: 2px solid #D4AF37; padding: 15px; text-align: center; }
     .stat-box h3 { font-size: 9pt; color: #64748B; margin-bottom: 10px; text-transform: uppercase; }
     .stat-box .value { font-size: 32pt; font-weight: bold; font-family: 'Courier New'; color: #0B0E14; }
     .stat-box.halal .value { color: #10B981; }
+    .stat-box.douteux .value { color: #F59E0B; }
     .stat-box.haram .value { color: #EF4444; }
-    .stat-box.errors .value { color: #F59E0B; }
+    .stat-box.errors .value { color: #64748B; }
     table.data { width: 100%; border-collapse: collapse; font-family: 'Consolas'; font-size: 8pt; margin: 20px 0; }
     table.data th { background: #0B0E14; color: #D4AF37; padding: 8px 4px; text-align: center; font-weight: bold; border: 1px solid #D4AF37; font-size: 7pt; text-transform: uppercase; }
     table.data td { padding: 6px 4px; border: 1px solid #E5E7EB; text-align: center; }
     table.data tr:nth-child(even) { background: #F8F9FA; }
     table.data td.ticker { font-weight: bold; background: #F8F9FA; }
     table.data td.verdict-compliant { background: #10B981; color: white; font-weight: bold; }
+    table.data td.verdict-partial { background: #F59E0B; color: white; font-weight: bold; }
     table.data td.verdict-noncompliant { background: #EF4444; color: white; font-weight: bold; }
     h2 { font-family: 'Courier New'; font-size: 16pt; color: #D4AF37; margin-bottom: 15px; border-bottom: 2px solid #D4AF37; padding-bottom: 8px; }
   </style>
@@ -251,8 +254,9 @@ export default function MultiTickerBatch() {
   <div class="stats-grid">
     <div class="stat-box"><h3>Total</h3><div class="value">${total}</div></div>
     <div class="stat-box halal"><h3>Halal</h3><div class="value">${halal}</div></div>
+    <div class="stat-box douteux"><h3>Douteux</h3><div class="value">${douteux}</div></div>
     <div class="stat-box haram"><h3>Haram</h3><div class="value">${haram}</div></div>
-    <div class="stat-box errors"><h3>Errors</h3><div class="value">${errors}</div></div>
+    <div class="stat-box errors"><h3>Erreurs</h3><div class="value">${errors}</div></div>
   </div>
 </div>
 
@@ -280,7 +284,7 @@ export default function MultiTickerBatch() {
           <td>${r.interestRatio}</td>
           <td style="color:#D4AF37;font-weight:bold;">${r.status === 'SUCCESS' ? r.score : '-'}</td>
           <td>${r.status === 'SUCCESS' ? r.compliantStandards + '/' + r.totalStandards : '-'}</td>
-          <td class="${r.verdict === 'COMPLIANT' ? 'verdict-compliant' : r.verdict === 'NON-COMPLIANT' ? 'verdict-noncompliant' : ''}">${r.verdict === 'COMPLIANT' ? '✓ HALAL' : r.verdict === 'NON-COMPLIANT' ? '✗ HARAM' : 'N/A'}</td>
+          <td class="${r.verdict === 'COMPLIANT' ? 'verdict-compliant' : r.verdict === 'PARTIAL' ? 'verdict-partial' : r.verdict === 'NON-COMPLIANT' ? 'verdict-noncompliant' : ''}">${r.verdict === 'COMPLIANT' ? '✓ HALAL' : r.verdict === 'PARTIAL' ? '⚠ DOUTEUX' : r.verdict === 'NON-COMPLIANT' ? '✗ HARAM' : 'N/A'}</td>
         </tr>
       `).join('')}
     </tbody>
@@ -290,6 +294,29 @@ export default function MultiTickerBatch() {
 <div class="page">
   <h2>APPENDIX</h2>
   <p style="font-size: 9pt; margin: 10px 0;">This report applies 7 Shariah screening standards to evaluate equity securities.</p>
+  
+  ${errors > 0 ? `
+  <div style="margin-top: 30px; background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px;">
+    <h3 style="font-size: 11pt; color: #92400E; margin-bottom: 10px;">⚠️ TICKERS NON TROUVÉS (ERREURS)</h3>
+    <p style="font-size: 9pt; color: #78350F; margin-bottom: 10px;">
+      Les tickers suivants n'ont pu être analysés:
+    </p>
+    <p style="font-size: 9pt; color: #78350F; font-family: 'Courier New'; font-weight: bold; margin-bottom: 15px;">
+      ${filteredResults.filter(r => r.status === 'ERROR').map(r => r.ticker).join(', ')}
+    </p>
+    <p style="font-size: 8pt; color: #92400E; margin-bottom: 5px;"><strong>CAUSES POSSIBLES:</strong></p>
+    <ul style="font-size: 8pt; color: #78350F; margin-left: 20px; line-height: 1.6;">
+      <li>Ticker inexistant sur les marchés publics</li>
+      <li>Symbole mal orthographié</li>
+      <li>Titre récemment délisté</li>
+      <li>Entreprise privée (non cotée en bourse)</li>
+    </ul>
+    <p style="font-size: 8pt; color: #92400E; margin-top: 10px;">
+      <strong>RECOMMANDATION:</strong> Vérifiez l'orthographe du symbole boursier sur Bloomberg/Reuters ou contactez support@halalscore.com pour assistance.
+    </p>
+  </div>
+  ` : ''}
+  
   <p style="font-size: 8pt; color: #64748B; margin-top: 20px; text-align: center;">© ${new Date().getFullYear()} HALALSCORE. All Rights Reserved.</p>
 </div>
 
@@ -426,7 +453,7 @@ export default function MultiTickerBatch() {
 
       {results.length > 0 && (
         <>
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-5 gap-4">
             <div className="bg-[#1A1F26] border border-[#2A313C] rounded p-4">
               <div className="text-xs uppercase tracking-wider text-[#94A3B8] mb-1">Total</div>
               <div className="text-2xl font-bold text-white font-mono">{stats.total}</div>
