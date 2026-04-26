@@ -74,7 +74,7 @@ export default function MultiTickerBatch() {
       const response = await fetch('/api/backend/v1/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker, language: 'EN' })
+        body: JSON.stringify({ ticker, language: 'FR' })
       })
       
       if (!response.ok) {
@@ -147,35 +147,80 @@ export default function MultiTickerBatch() {
   }
 
   const exportToExcel = () => {
-    const headers = ['#', 'Ticker', 'Entreprise', 'Pays', 'Type Business', 'Verdict', 'Score %', 'Standards', 'Debt %', 'Cash %', 'Receivables %', 'Interest %']
+    const XLSX = require('xlsx')
+    
+    const headers = ['#', 'Ticker', 'Entreprise', 'Pays', 'Type Business', 'Verdict', 'Score %', 'Standards', 'Dette %', 'Trésorerie %', 'Créances %', 'Intérêts %']
+    
+    const rows = filteredResults.map((r, idx) => ({
+      '#': idx + 1,
+      'Ticker': r.ticker,
+      'Entreprise': r.companyName || 'N/A',
+      'Pays': r.country || 'N/A',
+      'Type Business': r.businessType || 'N/A',
+      'Verdict': r.verdict === 'COMPLIANT' ? 'HALAL' : r.verdict === 'PARTIAL' ? 'DOUTEUX' : r.verdict === 'NON-COMPLIANT' ? 'HARAM' : 'N/A',
+      'Score %': r.status === 'SUCCESS' ? r.score : 'N/A',
+      'Standards': r.status === 'SUCCESS' ? `${r.compliantStandards}/${r.totalStandards}` : 'N/A',
+      'Dette %': r.debtRatio,
+      'Trésorerie %': r.cashRatio,
+      'Créances %': r.receivablesRatio,
+      'Intérêts %': r.interestRatio
+    }))
+
+    const ws = XLSX.utils.json_to_sheet(rows, { header: headers })
+
+    const range = XLSX.utils.decode_range(ws['!ref'])
+    for (let row = 1; row <= range.e.r; row++) {
+      const cellRef = XLSX.utils.encode_cell({ r: row, c: 7 })
+      if (ws[cellRef]) {
+        ws[cellRef].t = 's'
+        ws[cellRef].z = '@'
+      }
+    }
+
+    ws['!cols'] = [
+      { wch: 4 }, { wch: 8 }, { wch: 25 }, { wch: 6 },
+      { wch: 18 }, { wch: 12 }, { wch: 9 }, { wch: 11 },
+      { wch: 9 }, { wch: 13 }, { wch: 11 }, { wch: 11 }
+    ]
+
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'HalalScore Rapport')
+    XLSX.writeFile(wb, `halalscore_batch_${new Date().toISOString().split('T')[0]}.xlsx`)
+  }
+
+  const exportToCSV = () => {
+    const headers = ['#', 'Ticker', 'Entreprise', 'Pays', 'Type Business', 'Verdict', 'Score %', 'Standards', 'Dette %', 'Trésorerie %', 'Créances %', 'Intérêts %']
     const rows = filteredResults.map((r, idx) => [
       idx + 1,
       r.ticker,
       r.companyName || 'N/A',
       r.country || 'N/A',
       r.businessType || 'N/A',
-      r.verdict,
+      r.verdict === 'COMPLIANT' ? 'HALAL' : r.verdict === 'PARTIAL' ? 'DOUTEUX' : r.verdict === 'NON-COMPLIANT' ? 'HARAM' : 'N/A',
       r.status === 'SUCCESS' ? r.score : 'N/A',
-      r.status === 'SUCCESS' ? `'${r.compliantStandards}/${r.totalStandards}` : 'N/A',
+      r.status === 'SUCCESS' ? `="` + r.compliantStandards + '/' + r.totalStandards + `"` : 'N/A',
       r.debtRatio,
       r.cashRatio,
       r.receivablesRatio,
       r.interestRatio
     ])
-    
+
     const csv = [
       headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ...rows.map(row => row.map((cell, colIdx) => {
+        if (colIdx === 7 && typeof cell === 'string' && cell.startsWith('="')) {
+          return cell
+        }
+        return `"${cell}"`
+      }).join(','))
     ].join('\n')
-    
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
     link.download = `halalscore_batch_${new Date().toISOString().split('T')[0]}.csv`
     link.click()
   }
-
-  const exportToCSV = exportToExcel
 
   const exportToPDF = () => {
     const reportDate = new Date().toLocaleString('fr-FR', { 
@@ -199,7 +244,7 @@ export default function MultiTickerBatch() {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>HalalScore Report</title>
+  <title>HalalScore Rapport</title>
   <style>
     @page { size: A4 landscape; margin: 15mm; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -211,7 +256,7 @@ export default function MultiTickerBatch() {
     .doc-control { background: #F8F9FA; border: 2px solid #D4AF37; padding: 20px; margin: 40px auto; max-width: 600px; text-align: left; }
     .doc-control table { width: 100%; border-collapse: collapse; }
     .doc-control td { padding: 8px; font-size: 10pt; }
-    .doc-control td:first-child { font-weight: bold; color: #D4AF37; width: 180px; }
+    .doc-control td:first-child { font-weight: bold; color: #D4AF37; width: 220px; }
     .classification { background: #EF4444; color: white; padding: 10px; font-weight: bold; font-size: 12pt; margin: 30px auto; max-width: 500px; text-align: center; }
     .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin: 30px 0; }
     .stat-box { background: #F8F9FA; border: 2px solid #D4AF37; padding: 15px; text-align: center; }
@@ -233,24 +278,24 @@ export default function MultiTickerBatch() {
   </style>
 </head>
 <body>
-<div class="watermark">CONFIDENTIAL</div>
+<div class="watermark">CONFIDENTIEL</div>
 
 <div class="page cover">
-  <h1>MULTI-TICKER SHARIAH COMPLIANCE<br/>BATCH ANALYSIS REPORT</h1>
+  <h1>RAPPORT D'ANALYSE DE CONFORMITÉ SHARIAH<br/>ANALYSE PAR LOTS — MULTI-TITRES</h1>
   <div class="doc-control">
     <table>
-      <tr><td>Report ID:</td><td>${reportID}</td></tr>
-      <tr><td>Analysis Date:</td><td>${reportDate}</td></tr>
-      <tr><td>Total Securities:</td><td>${total}</td></tr>
-      <tr><td>Standards Applied:</td><td>AAOIFI · DJIM · S&P · MSCI · FTSE · Meezan · Usmani</td></tr>
-      <tr><td>Certification:</td><td>✓ VERIFIED & CERTIFIED</td></tr>
+      <tr><td>Référence rapport :</td><td>${reportID}</td></tr>
+      <tr><td>Date d'analyse :</td><td>${reportDate}</td></tr>
+      <tr><td>Total titres analysés :</td><td>${total}</td></tr>
+      <tr><td>Standards appliqués :</td><td>AAOIFI · DJIM · S&P · MSCI · FTSE · Meezan · Usmani</td></tr>
+      <tr><td>Certification :</td><td>✓ VÉRIFIÉ ET CERTIFIÉ</td></tr>
     </table>
   </div>
-  <div class="classification">CONFIDENTIAL — FOR INSTITUTIONAL USE ONLY</div>
+  <div class="classification">CONFIDENTIEL — USAGE INSTITUTIONNEL EXCLUSIVEMENT</div>
 </div>
 
 <div class="page">
-  <h2>EXECUTIVE SUMMARY</h2>
+  <h2>RÉSUMÉ EXÉCUTIF</h2>
   <div class="stats-grid">
     <div class="stat-box"><h3>Total</h3><div class="value">${total}</div></div>
     <div class="stat-box halal"><h3>Halal</h3><div class="value">${halal}</div></div>
@@ -261,12 +306,12 @@ export default function MultiTickerBatch() {
 </div>
 
 <div class="page">
-  <h2>DETAILED TICKER ANALYSIS</h2>
+  <h2>ANALYSE DÉTAILLÉE DES TITRES</h2>
   <table class="data">
     <thead>
       <tr>
-        <th>#</th><th>TICKER</th><th>COMPANY</th><th>COUNTRY</th><th>SECTOR</th>
-        <th>DEBT%</th><th>CASH%</th><th>RECV%</th><th>INT%</th>
+        <th>#</th><th>TICKER</th><th>SOCIÉTÉ</th><th>PAYS</th><th>SECTEUR</th>
+        <th>DETTE%</th><th>TRÉSO%</th><th>CRÉAN%</th><th>INT%</th>
         <th>SCORE</th><th>STD</th><th>VERDICT</th>
       </tr>
     </thead>
@@ -289,35 +334,47 @@ export default function MultiTickerBatch() {
       `).join('')}
     </tbody>
   </table>
+
+  <div style="margin-top: 15px; padding: 12px; border-top: 2px solid #D4AF37; background: #F8F9FA;">
+    <p style="font-size: 8pt; color: #0B0E14; font-weight: bold; margin-bottom: 8px;">📋 LÉGENDE DES COLONNES :</p>
+    <table style="font-size: 8pt; color: #444; line-height: 2; width: 100%; border-collapse: collapse;">
+      <tr><td style="padding: 2px 8px;"><strong>DETTE%</strong> : Ratio Dette/Actif = (Dette Totale / Actif Total) x 100</td></tr>
+      <tr><td style="padding: 2px 8px;"><strong>TRÉSO%</strong> : Ratio Trésorerie/Actif = (Trésorerie &amp; Équivalents / Actif Total) x 100</td></tr>
+      <tr><td style="padding: 2px 8px;"><strong>CRÉAN%</strong> : Ratio Créances/Actif = (Créances Totales / Actif Total) x 100</td></tr>
+      <tr><td style="padding: 2px 8px;"><strong>INT%</strong> : Ratio Intérêts/Revenus = (Revenus d'Intérêts / Revenus Totaux) x 100</td></tr>
+      <tr><td style="padding: 2px 8px;"><strong>SCORE</strong> : Score de Conformité Shariah = (Standards Validés / 7) x 100</td></tr>
+      <tr><td style="padding: 2px 8px;"><strong>STD</strong> : Nombre de Standards Shariah Validés (sur 7 au total)</td></tr>
+    </table>
+  </div>
 </div>
 
 <div class="page">
-  <h2>APPENDIX</h2>
-  <p style="font-size: 9pt; margin: 10px 0;">This report applies 7 Shariah screening standards to evaluate equity securities.</p>
+  <h2>ANNEXES</h2>
+  <p style="font-size: 9pt; margin: 10px 0;">Ce rapport applique 7 standards de screening Shariah pour évaluer les titres boursiers selon les normes institutionnelles islamiques.</p>
   
   ${errors > 0 ? `
   <div style="margin-top: 30px; background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px;">
-    <h3 style="font-size: 11pt; color: #92400E; margin-bottom: 10px;">⚠️ TICKERS NON TROUVÉS (ERREURS)</h3>
+    <h3 style="font-size: 11pt; color: #92400E; margin-bottom: 10px;">⚠️ TICKERS INVALIDES (ERREURS)</h3>
     <p style="font-size: 9pt; color: #78350F; margin-bottom: 10px;">
-      Les tickers suivants n'ont pu être analysés:
+      Les tickers suivants n'ont pas pu être analysés :
     </p>
     <p style="font-size: 9pt; color: #78350F; font-family: 'Courier New'; font-weight: bold; margin-bottom: 15px;">
       ${filteredResults.filter(r => r.status === 'ERROR').map(r => r.ticker).join(', ')}
     </p>
-    <p style="font-size: 8pt; color: #92400E; margin-bottom: 5px;"><strong>CAUSES POSSIBLES:</strong></p>
+    <p style="font-size: 8pt; color: #92400E; margin-bottom: 5px;"><strong>CAUSES POSSIBLES :</strong></p>
     <ul style="font-size: 8pt; color: #78350F; margin-left: 20px; line-height: 1.6;">
       <li>Ticker inexistant sur les marchés publics</li>
-      <li>Symbole mal orthographié</li>
-      <li>Titre récemment délisté</li>
+      <li>Symbole boursier mal orthographié</li>
+      <li>Titre récemment retiré de la cote</li>
       <li>Entreprise privée (non cotée en bourse)</li>
     </ul>
     <p style="font-size: 8pt; color: #92400E; margin-top: 10px;">
-      <strong>RECOMMANDATION:</strong> Vérifiez l'orthographe du symbole boursier sur Bloomberg/Reuters ou contactez support@halalscore.com pour assistance.
+      <strong>RECOMMANDATION :</strong> Vérifiez le symbole boursier sur Bloomberg ou Reuters, ou contactez support@halalscore.com pour assistance.
     </p>
   </div>
   ` : ''}
   
-  <p style="font-size: 8pt; color: #64748B; margin-top: 20px; text-align: center;">© ${new Date().getFullYear()} HALALSCORE. All Rights Reserved.</p>
+  <p style="font-size: 8pt; color: #64748B; margin-top: 20px; text-align: center;">© ${new Date().getFullYear()} HALALSCORE. Tous droits réservés.</p>
 </div>
 
 </body>
@@ -361,8 +418,8 @@ export default function MultiTickerBatch() {
                 <span className="text-white font-semibold">ANALYSE EN COURS</span>
               </div>
               <div className="text-right">
-                <div className="text-[#D4AF37] font-mono font-bold text-lg">Analysé: {progress.current} / {progress.total}</div>
-                <div className="text-[#64748B] text-xs">Restant: {progress.total - progress.current}</div>
+                <div className="text-[#D4AF37] font-mono font-bold text-lg">Analysé : {progress.current} / {progress.total}</div>
+                <div className="text-[#64748B] text-xs">Restant : {progress.total - progress.current}</div>
               </div>
             </div>
             <div className="bg-[#0B0E14] rounded-full h-3 overflow-hidden">
@@ -386,19 +443,19 @@ export default function MultiTickerBatch() {
             
             <div className="bg-[#1A1F26] rounded-lg p-6 mb-6 space-y-3 border border-[#2A313C]">
               <div className="flex justify-between">
-                <span className="text-[#94A3B8]">Nombre total de tickers:</span>
+                <span className="text-[#94A3B8]">Nombre total de tickers :</span>
                 <span className="text-white font-mono font-bold text-lg">{batchInfo.total}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#94A3B8]">Taille du lot:</span>
+                <span className="text-[#94A3B8]">Taille du lot :</span>
                 <span className="text-white font-mono font-bold">{batchInfo.batchSize} tickers</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#94A3B8]">Nombre de lots:</span>
+                <span className="text-[#94A3B8]">Nombre de lots :</span>
                 <span className="text-[#D4AF37] font-mono font-bold text-lg">{batchInfo.batches}</span>
               </div>
               <div className="flex justify-between border-t border-[#2A313C] pt-3 mt-3">
-                <span className="text-[#94A3B8]">Durée estimée:</span>
+                <span className="text-[#94A3B8]">Durée estimée :</span>
                 <span className="text-[#10B981] font-mono font-bold">~{batchInfo.estimatedTime} secondes</span>
               </div>
             </div>
@@ -446,7 +503,7 @@ export default function MultiTickerBatch() {
             disabled={loading || !tickersInput.trim()}
             className="px-6 py-3 bg-[#D4AF37] text-[#0B0E14] rounded font-semibold uppercase text-xs tracking-wider hover:bg-[#E5C135] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
-            {loading ? 'ANALYSE EN COURS...' : 'LANCER L\'ANALYSE'}
+            {loading ? 'ANALYSE EN COURS...' : "LANCER L'ANALYSE"}
           </button>
         </div>
       </div>
@@ -558,19 +615,19 @@ export default function MultiTickerBatch() {
                                 <h4 className="text-xs font-semibold uppercase text-[#D4AF37] mb-3 tracking-wider">Ratios Financiers</h4>
                                 <div className="space-y-2 text-sm font-mono">
                                   <div className="flex justify-between">
-                                    <span className="text-[#94A3B8]">Debt Ratio:</span>
+                                    <span className="text-[#94A3B8]">Ratio Dette :</span>
                                     <span className="text-white font-semibold">{result.debtRatio}</span>
                                   </div>
                                   <div className="flex justify-between">
-                                    <span className="text-[#94A3B8]">Cash Ratio:</span>
+                                    <span className="text-[#94A3B8]">Ratio Trésorerie :</span>
                                     <span className="text-white font-semibold">{result.cashRatio}</span>
                                   </div>
                                   <div className="flex justify-between">
-                                    <span className="text-[#94A3B8]">Receivables Ratio:</span>
+                                    <span className="text-[#94A3B8]">Ratio Créances :</span>
                                     <span className="text-white font-semibold">{result.receivablesRatio}</span>
                                   </div>
                                   <div className="flex justify-between">
-                                    <span className="text-[#94A3B8]">Interest Ratio:</span>
+                                    <span className="text-[#94A3B8]">Ratio Intérêts :</span>
                                     <span className="text-white font-semibold">{result.interestRatio}</span>
                                   </div>
                                 </div>
@@ -582,7 +639,7 @@ export default function MultiTickerBatch() {
                                     <div key={name} className="flex justify-between items-center py-1">
                                       <span className="text-[#94A3B8]">{name}</span>
                                       <span className={`font-semibold ${data.compliant ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
-                                        {data.compliant ? '✓ PASS' : '✗ FAIL'}
+                                        {data.compliant ? '✓ VALIDÉ' : '✗ REFUSÉ'}
                                       </span>
                                     </div>
                                   ))}
